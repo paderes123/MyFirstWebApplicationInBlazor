@@ -1,0 +1,40 @@
+name: Deploy to GitHub Pages
+on:
+  push:
+    branches: [ master ]
+jobs:
+  deploy-to-github-pages:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the code
+      - uses: actions/checkout@v4
+      # Set up .NET SDK
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      # Install wasm-tools workload
+      - name: Install .NET WASM Tools
+        run: dotnet workload install wasm-tools
+      # Publish the Blazor project
+      - name: Publish
+        run: dotnet publish MyFirstWebApplicationInBlazor/MyFirstWebApplicationInBlazor.csproj -c Release -o release -p:GHPages=true
+      # Update base href to match GitHub Pages repository path
+      - name: Rewrite base href
+        uses: SteveSandersonMS/ghaction-rewrite-base-href@v1
+        with:
+          html_path: release/wwwroot/index.html
+          base_href: /MyFirstWebApplicationInBlazor/
+      # Copy index.html to 404.html for SPA routing
+      - name: Copy index.html to 404.html
+        run: cp release/wwwroot/index.html release/wwwroot/404.html
+      # Add .nojekyll file to include underscore folders
+      - name: Add .nojekyll file
+        run: touch release/wwwroot/.nojekyll
+      # Deploy to gh-pages branch
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: release/wwwroot
+          token: ${{ secrets.GITHUB_TOKEN }}
